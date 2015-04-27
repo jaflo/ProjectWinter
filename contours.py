@@ -77,8 +77,11 @@ while True:
 	hsv_img = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
 	
 	if calibrating:
+		print "Starting calibration..."
+		print "Please set up environment and place all frames on solid background"
 		cv2.setMouseCallback("frame", clicker)
 		if counter/4 == 0:
+			print "Click the background at four different locations"
 			if counter%4 == 3:
 				if colors != []:
 					h = [a[0] for a in colors]
@@ -93,6 +96,7 @@ while True:
 				colors = []
 		elif counter/4 == 1:
 			#print colors
+			print "Click the blue frame at four different locations"
 			if counter%4 == 3:
 				if colors != []:
 					h = [a[0] for a in colors]
@@ -106,6 +110,7 @@ while True:
 					blue = Finder(blueMin, blueMax)
 				colors = []
 		elif counter/4 == 2:
+			print "Click the green frame at four different locations"
 			if counter%4 == 3:
 				h = [a[0] for a in colors]
 				h.sort()
@@ -118,7 +123,6 @@ while True:
 				green = Finder(greenMin, greenMax)        
 				calibrating = False
 				colors = []
-			
 	else:
 		# Capture frame-by-frame
 		# and show the outlines
