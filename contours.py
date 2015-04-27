@@ -109,7 +109,7 @@ while True:
 					blueMax = np.array([h[3]+10, s[3]+10, v[3]+10], np.uint8)
 					blue = Finder(blueMin, blueMax)
 				colors = []
-		elif counter/4 == 2:
+		elif counter/4 == 2:  
 			print "Click the green frame at four different locations"
 			if counter%4 == 3:
 				h = [a[0] for a in colors]
