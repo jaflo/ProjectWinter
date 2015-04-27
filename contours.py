@@ -4,6 +4,11 @@ import numpy as np
 
 videoCapture = cv2.VideoCapture(0)
 
+calibrating = True
+counter = -1 #how many clicks before calibration ends
+color = 0 # color from click
+colors = []
+
 class Finder:
     x = 0
     y = 0
@@ -21,45 +26,108 @@ class Finder:
         ret,thresh = cv2.threshold(frame_threshed, 127, 255, 0)
         contours, hierarchy = cv2.findContours(thresh,cv2.RETR_TREE,cv2.CHAIN_APPROX_SIMPLE)
 
-        areas = [cv2.contourArea(c) for c in contours]
-        if areas != []:
-            max_index = np.argmax(areas)
-            cnt = contours[max_index]
+        def recupdate(contours):
 
-            self.x, self.y, self.w, self.h = cv2.boundingRect(cnt)
-            cv2.rectangle(frame, (self.x, self.y), (self.x + self.w, self.y + self.h), (a, b, ccCccc), 2)
-            cv2.rectangle(hsv_img, (self.x, self.y), (self.x + self.w, self.y + self.h), (a, b, ccCccc), 2)
+            areas = [cv2.contourArea(c) for c in contours]
+            
+            if areas != []:
+                max_index = np.argmax(areas)
+                cnt = contours[max_index]
 
-        else:
-            cv2.rectangle(frame, (self.x, self.y), (self.x + self.w, self.y + self.h), (a, b, ccCccc), 2)
-            cv2.rectangle(hsv_img, (self.x, self.y), (self.x + self.w, self.y + self.h), (a, b, ccCccc), 2)
+                Height, Width, trash = frame.shape
 
-blueMin = np.array([110, 100, 100], np.uint8)
-blueMax = np.array([130, 255, 255], np.uint8)
-blue = Finder(blueMin, blueMax)
+                self.x, self.y, self.w, self.h = cv2.boundingRect(cnt)
+                if (0.95 < self.w/self.h < 1/0.95) or len(contours) == 1:
+                    cv2.rectangle(frame, (self.x, self.y), (self.x + self.w, self.y + self.h), (a, b, ccCccc), 2)
+                    cv2.rectangle(hsv_img, (self.x, self.y), (self.x + self.w, self.y + self.h), (a, b, ccCccc), 2)
+                else:
+                    contours = contours[:max_index] + contours[max_index + 1:]
+                    recupdate(contours)
+                
+            else:
+                cv2.rectangle(frame, (self.x, self.y), (self.x + self.w, self.y + self.h), (a, b, ccCccc), 2)
+                cv2.rectangle(hsv_img, (self.x, self.y), (self.x + self.w, self.y + self.h), (a, b, ccCccc), 2)
 
-greenMin = np.array([50, 100, 100], np.uint8)
-greenMax = np.array([70, 255, 255], np.uint8)
-green = Finder(greenMin, greenMax)
+        recupdate(contours)
+
+def clicker(event, x, y, flags, param):
+    if event == cv2.EVENT_LBUTTONDOWN:
+        global color
+        global colors
+        color = hsv_img[y][x]
+        colors = colors + [color]
+
+        global counter
+        counter += 1
+        print counter
+
+#frame = cv2.imread("color_wheel_730.png")
 
 while True:
-    # Capture frame-by-frame
     ret, frame = videoCapture.read()
 
     hsv_img = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
+    
+    if calibrating:
+        cv2.setMouseCallback("frame", clicker)
+        if counter/4 == 0:    
+            if counter%4 == 3:
+                if colors != []:
+                    h = [a[0] for a in colors]
+                    h.sort()
+                    s = [a[1] for a in colors]
+                    s.sort()
+                    v = [a[2] for a in colors]
+                    v.sort()
+                    whiteMin = np.array([h[0]-10, s[0]-10, v[0]-10], np.uint8)
+                    whiteMax = np.array([h[3]+10, s[3]+10, v[3]+10], np.uint8)
+                    white = Finder(whiteMin, whiteMax)
+                colors = []
 
-    blue.update(frame, hsv_img, 255, 0, 0)
-    green.update(frame, hsv_img, 0, 255, 0)
+        elif counter/4 == 1:
+            print colors
+            if counter%4 == 3:
+                if colors != []:
+                    h = [a[0] for a in colors]
+                    h.sort()
+                    s = [a[1] for a in colors]
+                    s.sort()
+                    v = [a[2] for a in colors]
+                    v.sort()
+                    blueMin = np.array([h[0]-10, s[0]-10, v[0]-10], np.uint8)
+                    blueMax = np.array([h[3]+10, s[3]+10, v[3]+10], np.uint8)
+                    blue = Finder(blueMin, blueMax)
+                colors = []
 
-    # Display the resulting frame
-    #cv2.imshow('frame_threshed', frame_threshed)
-    #cv2.imshow('thresh', thresh)
+        elif counter/4 == 2:
+            if counter%4 == 3:
+                h = [a[0] for a in colors]
+                h.sort()
+                s = [a[1] for a in colors]
+                s.sort()
+                v = [a[2] for a in colors]
+                v.sort()
+                greenMin = np.array([h[0]-10, s[0]-10, v[0]-10], np.uint8)
+                greenMax = np.array([h[3]+10, s[3]+10, v[3]+10], np.uint8)
+                green = Finder(greenMin, greenMax)        
+                calibrating = False
+                colors = []
+            
+    else:
+        # Capture frame-by-frame
+
+        white.update(frame, hsv_img, 0, 0, 0)
+        blue.update(frame, hsv_img, 255, 0, 0)
+        green.update(frame, hsv_img, 0, 255, 0)
+        print white.color_min
+
     cv2.imshow('frame', frame)
-    cv2.imshow('hsv_img', hsv_img)
+    #cv2.imshow('hsv_img', hsv_img)
 
     if cv2.waitKey(1) & 0xFF == ord('q'):
         break
-
+    
+    time.sleep(1/10.)
 # When everything is done, release the capture
 video_capture.release()
 cv2.destroyAllWindows()
