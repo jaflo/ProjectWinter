@@ -8,6 +8,9 @@ calibrating = True
 counter = -1 #how many clicks before calibration ends
 color = 0 # color from click
 colors = []
+totaltime = 0
+totaltries = 0
+currentstep = "Click the background"
 
 class Finder:
 	x = 0
@@ -32,7 +35,6 @@ class Finder:
 			areas = [cv2.contourArea(c) for c in contours]
 			
 			def showprev():
-				#print "[FAIL] showing previous frame"
 				cv2.rectangle(frame, (self.x, self.y), (self.x + self.w, self.y + self.h), (a, b, ccCccc), 2)
 				cv2.rectangle(hsv_img, (self.x, self.y), (self.x + self.w, self.y + self.h), (a, b, ccCccc), 2)
 
@@ -43,7 +45,6 @@ class Finder:
 				nowx, nowy, noww, nowh = cv2.boundingRect(cnt)
 				self.previouswidths.append(noww)
 				self.previousheights.append(nowh)
-				#print "[INFO] avg width of past 30 frames", np.median(self.previouswidths[-30:])
 				if (threshhold<(float(noww)/float(np.median(self.previouswidths[-30:])))<(1/threshhold)) and (threshhold<(float(nowh)/float(np.median(self.previousheights[-30:])))<(1/threshhold)):
 					Height, Width, trash = frame.shape
 					self.x, self.y, self.w, self.h = cv2.boundingRect(cnt)
@@ -67,23 +68,30 @@ def clicker(event, x, y, flags, param):
 		colors = colors + [color]
 		global counter
 		counter += 1
-		print counter
 
 #frame = cv2.imread("color_wheel_730.png")
 
 while True:
 	ret, frame = videoCapture.read()
-
 	hsv_img = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
+
+	def text(text):
+		x = 10
+		y = 20
+		padding = 3
+		global frame
+		size = cv2.getTextSize(text, cv2.FONT_HERSHEY_PLAIN, 1, 25)
+		cv2.rectangle(frame, (x-padding,y+padding),
+			(x+size[0][0]-10*padding,y-size[0][1]/2-padding), 0, -99)
+		cv2.putText(frame, text, (10,20), cv2.FONT_HERSHEY_PLAIN, 1, [255,255,255])
 	
 	if calibrating:
-		print "Starting calibration..."
-		print "Please set up environment and place all frames on solid background"
+		text(currentstep)
 		cv2.setMouseCallback("frame", clicker)
 		if counter/4 == 0:
-			print "Click the background at four different locations"
 			if counter%4 == 3:
 				if colors != []:
+					currentstep = "Click the blue frame"
 					h = [a[0] for a in colors]
 					h.sort()
 					s = [a[1] for a in colors]
@@ -95,10 +103,9 @@ while True:
 					white = Finder(whiteMin, whiteMax)
 				colors = []
 		elif counter/4 == 1:
-			#print colors
-			print "Click the blue frame at four different locations"
 			if counter%4 == 3:
 				if colors != []:
+					currentstep = "Click the green frame"
 					h = [a[0] for a in colors]
 					h.sort()
 					s = [a[1] for a in colors]
@@ -109,8 +116,7 @@ while True:
 					blueMax = np.array([h[3]+10, s[3]+10, v[3]+10], np.uint8)
 					blue = Finder(blueMin, blueMax)
 				colors = []
-		elif counter/4 == 2:  
-			print "Click the green frame at four different locations"
+		elif counter/4 == 2:
 			if counter%4 == 3:
 				h = [a[0] for a in colors]
 				h.sort()
@@ -124,12 +130,16 @@ while True:
 				calibrating = False
 				colors = []
 	else:
+		start = time.time()
 		# Capture frame-by-frame
 		# and show the outlines
 		white.update(frame, hsv_img, 0, 0, 0)
 		blue.update(frame, hsv_img, 255, 0, 0)
 		green.update(frame, hsv_img, 0, 255, 0)
 		#print white.color_min
+		totaltime+=time.time()-start
+		totaltries+=1
+		text("FPS: "+str(round(totaltries/totaltime,2)))
 
 	cv2.imshow('frame', frame)
 	#cv2.imshow('hsv_img', hsv_img)
