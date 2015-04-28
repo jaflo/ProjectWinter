@@ -8,8 +8,7 @@ calibrating = True
 counter = -1 #how many clicks before calibration ends
 color = 0 # color from click
 colors = []
-totaltime = 0
-totaltries = 0
+trytime = []
 currentstep = "Click the background"
 
 class Finder:
@@ -40,12 +39,13 @@ class Finder:
 
 			if areas != []:
 				threshhold = 0.9
+				oflast = 30 #frames
 				max_index = np.argmax(areas)
 				cnt = contours[max_index]
 				nowx, nowy, noww, nowh = cv2.boundingRect(cnt)
 				self.previouswidths.append(noww)
 				self.previousheights.append(nowh)
-				if (threshhold<(float(noww)/float(np.median(self.previouswidths[-30:])))<(1/threshhold)) and (threshhold<(float(nowh)/float(np.median(self.previousheights[-30:])))<(1/threshhold)):
+				if (threshhold<(float(noww)/float(np.median(self.previouswidths[-oflast:])))<(1/threshhold)) and (threshhold<(float(nowh)/float(np.median(self.previousheights[-oflast:])))<(1/threshhold)):
 					Height, Width, trash = frame.shape
 					self.x, self.y, self.w, self.h = cv2.boundingRect(cnt)
 					if (0.95 < self.w/self.h < 1/0.95) or len(contours) == 1:
@@ -72,17 +72,18 @@ def clicker(event, x, y, flags, param):
 #frame = cv2.imread("color_wheel_730.png")
 
 while True:
+	start = time.time()
 	ret, frame = videoCapture.read()
 	hsv_img = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
 
 	def text(text):
 		x = 10
 		y = 20
-		padding = 3
+		padding = 1
 		global frame
 		size = cv2.getTextSize(text, cv2.FONT_HERSHEY_PLAIN, 1, 25)
 		cv2.rectangle(frame, (x-padding,y+padding),
-			(x+size[0][0]-10*padding,y-size[0][1]/2-padding), 0, -99)
+			(x+size[0][0]-15,y-size[0][1]/2-padding), 0, -99)
 		cv2.putText(frame, text, (10,20), cv2.FONT_HERSHEY_PLAIN, 1, [255,255,255])
 	
 	if calibrating:
@@ -130,17 +131,15 @@ while True:
 				calibrating = False
 				colors = []
 	else:
-		start = time.time()
 		# Capture frame-by-frame
 		# and show the outlines
 		white.update(frame, hsv_img, 0, 0, 0)
 		blue.update(frame, hsv_img, 255, 0, 0)
 		green.update(frame, hsv_img, 0, 255, 0)
 		#print white.color_min
-		totaltime+=time.time()-start
-		totaltries+=1
-		text("FPS: "+str(round(totaltries/totaltime,2)))
-
+		trytime.append(time.time()-start)
+		text("FPS: "+str(round(1/np.mean(trytime[-20:]),2)))
+	
 	cv2.imshow('frame', frame)
 	#cv2.imshow('hsv_img', hsv_img)
 
