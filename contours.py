@@ -1,3 +1,7 @@
+"""
+Lots of code by glooga, although he did not commit
+"""
+
 import cv2
 import time
 import numpy as np
@@ -8,7 +12,7 @@ calibrating = True
 counter = -1 #how many clicks before calibration ends
 color = 0 # color from click
 colors = []
-trytime = []
+trytime = [] #will contain the time to process a frame
 currentstep = "Click the background"
 
 class Finder:
@@ -68,8 +72,6 @@ def clicker(event, x, y, flags, param):
 		colors = colors + [color]
 		global counter
 		counter += 1
-
-#frame = cv2.imread("color_wheel_730.png")
 
 while True:
 	start = time.time()
@@ -147,6 +149,6 @@ while True:
 		break
 	
 	time.sleep(1/10.)
-# When everything is done, release the capture
+
 video_capture.release()
 cv2.destroyAllWindows()
